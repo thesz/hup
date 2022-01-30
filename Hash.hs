@@ -1,4 +1,10 @@
-{-# LANGUAGE BangPatterns, ForeignFunctionInterface, CApiFFI #-}
+-- |Hash.hs
+--
+-- A simple interface to siphash.
+--
+-- Copyright (C) 2022 Serguey Zefirov.
+
+{-# LANGUAGE ForeignFunctionInterface, CApiFFI #-}
 
 module Hash where
 

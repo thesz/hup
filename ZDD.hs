@@ -4,7 +4,7 @@
 --
 -- Node must have IDs that point to nodes with smaller variables.
 --
--- Copyright (C) 2021 Serguey Zefirov
+-- Copyright (C) 2021, 2022 Serguey Zefirov
 module ZDD where
 
 import Control.Monad
@@ -20,17 +20,17 @@ import qualified Data.Set as Set
 import Data.Word
 
 data ID = ID Int
-	deriving (Eq, Ord, Show)
+	deriving (Eq, Ord, Read, Show)
 
 id0, id1 :: ID
 id0 = ID 0
 id1 = ID 1
 
 data ZDDN = Empty | One | Node !Int !ID !ID -- Node var present absent
-	deriving (Eq, Ord, Show)
+	deriving (Eq, Ord, Read, Show)
 
 data IDP = IDP !ID !ID
-	deriving (Eq, Ord, Show)
+	deriving (Eq, Ord, Read, Show)
 
 data ZDDS = ZDDS
 	{ zddsCounter		:: !Int
@@ -110,8 +110,8 @@ member root set
 				case (xs, node) of
 					([], Node _ _ a) -> check a xs -- look at the "element is not in set" part.
 					(y:ys, Node v p a)
-						| v == x -> check ys p -- check whether set--of-sets that contains v also contains rest.
-						| otherwise -> check xs a
+						| v == y -> check p ys -- check whether set--of-sets that contains v also contains rest.
+						| otherwise -> check a xs
 
 cached :: (ZDDS -> Map.Map IDP ID, IDP -> ID -> ZDDS -> ZDDS)
 	-> ID -> ID -> ZDDM ID -> ZDDM ID
@@ -218,34 +218,6 @@ garbageCollect roots = do
 	, zddsIntersectCache	= Map.empty
 -}
 
--- | the operation "(w, wo) <- split var root" will return pair w, wo (with, without) such that
--- union (insert var w) wo === root where insert operation equips all subsets with the additional
--- element.
---
--- so bear in mind that variable is not present in either of sets.
-split :: Bool -> Int -> ID -> ZDDM (ID, ID)
-split withVar var root = do
-	snd <$> walk Map.empty root
-	where
-		walk visited root
-			| root == id0 || root == id1 = return (visited, (id0, root))
-			| Just (IDP w wo) <- Map.lookup root visited =
-				return (visited, (w, wo))
-			| otherwise = do
-				Node var' p a <- fetchNode root
-				case compare var var' of
-					EQ -> do
-						w <- if withVar
-							then getID $ Node var p id0
-							else return p
-						return (Map.insert root (IDP w a) visited, (w, a))
-					GT -> do
-						return (visited, (id0, root))
-					LT -> do
-						(visitedp, (wp, wop)) <- walk visited p
-						(visiteda, (wa, woa)) <- walk visitedp a
-						w <- union wp wa
-						wo <- union wop woa
-						return (Map.insert root (IDP w wo) visiteda, (w, wo))
-
-
+runWithNodes :: Map.Map ID ZDDN -> ZDDM a -> IO a
+runWithNodes nodes act = do
+	flip evalStateT (error "construct  with nodes") act
